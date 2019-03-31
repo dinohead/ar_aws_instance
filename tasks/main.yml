@@ -1,0 +1,11 @@
+---
+- name: Gather facts about the EC2 instance
+  include: "prepare.yml"
+
+- name: Remove the EC2 instance
+  include: "remove.yml"
+  when: aws_instance_state == 'absent' and aws_instance_exists
+
+- name: Create the EC2 instance
+  include: "create.yml"
+  when: aws_instance_state == 'present'

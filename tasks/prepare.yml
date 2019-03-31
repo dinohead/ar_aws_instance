@@ -1,0 +1,66 @@
+---
+
+- name: EC2_INSTANCE_FACTS | Check if instance exists
+  ec2_instance_facts:
+    aws_access_key: "{{ aws_instance_aws_access_key }}"
+    aws_secret_key: "{{ aws_instance_aws_secret_key }}"
+    region: "{{ aws_instance_aws_region }}"
+    filters:
+      "tag:Name": "{{ aws_instance_name }}"
+      instance-state-name: [ 'pending', 'running', 'shutting-down', 'stopping', 'stopped' ]
+  register: task_result
+  until: task_result.instances[0] is undefined or task_result.instances[0].state.name == 'running' or task_result.instances[0].state.name == 'stopped'
+  retries: 50
+
+- name: Set facts if instance exists
+  set_fact:
+    aws_instance_exists: true
+    aws_instance_facts: "{{ task_result.instances[0] }}"
+  when: task_result.instances[0] is defined
+
+- name: Set facts if instance exists
+  set_fact:
+    aws_instance_root_volume_id: "{{ ( aws_instance_facts.block_device_mappings | selectattr( 'device_name', 'equalto', aws_instance_facts.root_device_name ) | list | first ).ebs.volume_id }}"
+  when: task_result.instances[0] is defined
+
+- name: Set facts if instance does not exist
+  set_fact:
+    aws_instance_exists: false
+  when: task_result.instances[0] is undefined
+
+- name: Instance state
+  debug:
+    var: aws_instance_exists
+
+- name: All facts on instance
+  debug:
+    var: aws_instance_facts
+
+- name: Volume ID of the root device
+  debug:
+    var: aws_instance_root_volume_id
+
+- name: Public IP
+  debug:
+    var: aws_instance_facts.public_ip_address
+
+- name: Private IP
+  debug:
+    var: aws_instance_facts.private_ip_address
+
+- name: Find Subnet IDs
+  ec2_vpc_subnet_facts:
+    aws_access_key: "{{ aws_instance_aws_access_key }}"
+    aws_secret_key: "{{ aws_instance_aws_secret_key }}"
+    region: "{{ aws_instance_aws_region }}"
+    filters:
+      "tag:Name": "{{ item.subnet_name }}"
+  register: task_result
+  with_items: "{{ aws_instance_network }}"
+
+- set_fact:
+    aws_instance_network: []
+
+- set_fact:
+    aws_instance_network: "{{ aws_instance_network + [ item.item | combine( {'subnet_id': item.subnets[0].id}) ] }}"
+  with_items: "{{ task_result.results }}"

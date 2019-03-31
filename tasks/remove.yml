@@ -1,0 +1,19 @@
+---
+
+- name: EC2 | Destroy instance
+  ec2:
+    aws_access_key: "{{ aws_instance_aws_access_key }}"
+    aws_secret_key: "{{ aws_instance_aws_secret_key }}"
+    region: "{{ aws_instance_aws_region }}"
+    instance_ids:
+      - "{{ aws_instance_facts.instance_id }}"
+    state: absent
+    wait: yes
+
+- name: EC2_VOL | Destroy instance root volume
+  ec2_vol:
+    aws_access_key: "{{ aws_instance_aws_access_key }}"
+    aws_secret_key: "{{ aws_instance_aws_secret_key }}"
+    region: "{{ aws_instance_aws_region }}"
+    id: "{{ aws_instance_root_volume_id }}"
+    state: absent

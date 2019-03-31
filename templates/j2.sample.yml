@@ -1,0 +1,11 @@
+#cloud-config
+
+users:
+  - name: "{{ ansible_user }}"
+    homedir: "{{ ansible_user_dir }}"
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: wheel
+    ssh-authorized-keys:
+      - "{{ ansible_rsa_public }}"
+    lock_passwd: True
