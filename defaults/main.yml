@@ -1,0 +1,17 @@
+---
+
+ansible_python_interpreter: python
+aws_instance_aws_access_key: DAKL384JFJAS8FJAF848
+aws_instance_aws_secret_key: NMI&74idjINdie6784/Hhd85UDjd859DJDidj384
+aws_instance_state: present
+aws_instance_aws_region: us-east-2
+aws_instance_name: "{{ inventory_hostname }}"
+aws_instance_image: ami-02ad6b83fd606d009
+aws_instance_platform: linux
+aws_instance_instance_type: t2.micro
+aws_instance_instance_disk_size: 30
+aws_instance_network:
+    - assign_public_ip: false
+      delete_on_termination: true
+      subnet_name: test_11_private_subnet
+aws_instance_groups: [ 'default' ]

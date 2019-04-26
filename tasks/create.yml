@@ -1,0 +1,99 @@
+---
+
+- name: EC2_ENI | Create Instance NICs
+  ec2_eni:
+    aws_access_key: "{{ aws_instance_aws_access_key }}"
+    aws_secret_key: "{{ aws_instance_aws_secret_key }}"
+    region: "{{ aws_instance_aws_region }}"
+    state: present
+    private_ip_address: "{{ item.private_ip_address }}"
+    delete_on_termination: true
+    subnet_id: "{{ item.subnet_id }}"
+    security_groups: "{{ aws_instance_groups }}"
+  with_items: "{{ aws_instance_network }}"
+  register: task_result
+
+- set_fact:
+    aws_instance_network: []
+    aws_instance_network_priv: []
+
+- set_fact:
+    aws_instance_network: "{{ aws_instance_network + [ item.item | combine( {'nic_id': item.interface.id}) ] }}"
+    aws_instance_network_priv: "{{ aws_instance_network_priv + [ item.interface.id ] }}"
+  with_items: "{{ task_result.results }}"
+
+- debug:
+    var: aws_instance_network_priv
+
+- name: EC2 | Create Instance
+  ec2:
+    aws_access_key: "{{ aws_instance_aws_access_key }}"
+    aws_secret_key: "{{ aws_instance_aws_secret_key }}"
+    region: "{{ aws_instance_aws_region }}"
+    instance_type: "{{ aws_instance_instance_type }}"
+    image: "{{ aws_instance_image }}"
+    wait: yes
+    instance_tags:
+      Name: "{{ inventory_hostname }}"
+    count_tag:
+      Name: "{{ inventory_hostname }}"
+    volumes:
+      - volume_size: "{{ aws_instance_instance_disk_size }}"
+        device_name: /dev/sda1
+        delete_on_termination: true
+    exact_count: 1
+    network_interfaces: "{{ aws_instance_network_priv }}"
+    user_data: |
+      #cloud-config
+      {{ aws_instance_user_data | encode_yaml }}
+  when: ( aws_instance_platform | lower ) == 'linux'
+
+- name: EC2 | Create Instance
+  ec2:
+    aws_access_key: "{{ aws_instance_aws_access_key }}"
+    aws_secret_key: "{{ aws_instance_aws_secret_key }}"
+    region: "{{ aws_instance_aws_region }}"
+    instance_type: "{{ aws_instance_instance_type }}"
+    image: "{{ aws_instance_image }}"
+    wait: yes
+    instance_tags:
+      Name: "{{ inventory_hostname }}"
+    count_tag:
+      Name: "{{ inventory_hostname }}"
+    volumes:
+      - volume_size: "{{ aws_instance_instance_disk_size }}"
+        device_name: /dev/sda1
+        delete_on_termination: true
+    exact_count: 1
+    network_interfaces: "{{ aws_instance_network_priv }}"
+    user_data: |
+      <powershell>
+      {{ aws_instance_user_data }}
+      </powershell>
+  when: ( aws_instance_platform | lower ) == 'windows'
+
+- include: prepare.yml
+
+- debug:
+    var: aws_instance_facts
+
+- name: Add name tag to NICS
+  ec2_tag:
+    state: present
+    aws_access_key: "{{ aws_instance_aws_access_key }}"
+    aws_secret_key: "{{ aws_instance_aws_secret_key }}"
+    region: "{{ aws_instance_aws_region }}"
+    resource: "{{ item.network_interface_id }}"
+    tags:
+      'Name': "{{ inventory_hostname + '_nic_' + ( item.attachment.device_index | string ) }}"
+  with_items: "{{ aws_instance_facts.network_interfaces }}"
+
+- name: Add name tag to root volume
+  ec2_tag:
+    state: present
+    aws_access_key: "{{ aws_instance_aws_access_key }}"
+    aws_secret_key: "{{ aws_instance_aws_secret_key }}"
+    region: "{{ aws_instance_aws_region }}"
+    resource: "{{ aws_instance_root_volume_id}}"
+    tags:
+      'Name': "{{ inventory_hostname + '_vol_root' }}"
