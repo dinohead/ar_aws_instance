@@ -1,6 +1,6 @@
-# Role Title
+# aws_instance
 
-Brief description of the role
+Documentation coming in the next release
 
 ## Requirements
 
