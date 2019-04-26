@@ -7,6 +7,7 @@ aws_instance_state: present
 aws_instance_aws_region: us-east-2
 aws_instance_name: "{{ inventory_hostname }}"
 aws_instance_image: ami-02ad6b83fd606d009
+aws_instance_platform: linux
 aws_instance_instance_type: t2.micro
 aws_instance_instance_disk_size: 30
 aws_instance_network:
